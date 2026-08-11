@@ -444,7 +444,10 @@ void MainWindow::refresh()
 void MainWindow::configureShell()
 {
     QString error;
-    if (ShellIntegration::isInstalled()) {
+    if (ShellIntegration::isMachineInstalled()) {
+        QMessageBox::information(this, tr("Windows 탐색기 통합"),
+            tr("탐색기 통합이 MSI 설치 패키지에 의해 시스템 전체에 설치되어 있습니다.\n변경하거나 제거하려면 Windows의 설치된 앱에서 LMDB Archiver를 관리하세요."));
+    } else if (ShellIntegration::isInstalled()) {
         if (QMessageBox::question(this, tr("Windows 탐색기 통합"), tr("탐색기 통합이 설치되어 있습니다. 제거할까요?")) == QMessageBox::Yes) {
             if (!ShellIntegration::uninstall(&error)) showError(error); else QMessageBox::information(this, tr("완료"), tr("탐색기 통합을 제거했습니다."));
         }

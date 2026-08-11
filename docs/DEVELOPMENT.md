@@ -4,8 +4,10 @@
 
 - `src/archive`: Qt Core + LMDB만 사용하는 저장/압축/추출 코어
 - `src/app`: Qt Widgets UI, 트리 모델, 외부 파일 드롭
-- `src/platform`: Windows 현재 사용자 셸 통합
+- `src/platform`: Windows 셸 통합과 MSI 설치 상태 감지
 - `tests`: 임시 디렉터리를 사용하는 왕복/교체/삭제 테스트
+- `installer`: WiX 5 MSI 정의와 설치 라이선스
+- `scripts`: 휴대용 ZIP 및 MSI 패키징 자동화
 
 ## 아카이브 형식 v2
 
@@ -31,3 +33,9 @@ LMDB는 `MDB_NOSUBDIR`로 열립니다. 메타데이터 키는 UTF-8 `entry:<nor
 - 셸 통합은 `Q_OS_WIN`으로 격리하고 다른 OS에서는 명확한 오류 반환
 
 포맷을 바꿀 때는 기존 버전 판독기를 유지하고 `kFormatVersion`을 올리십시오.
+
+## Windows 패키징
+
+`scripts/build-msi.ps1`은 먼저 `scripts/package.ps1`로 Qt 플러그인, MSVC 런타임, 라이선스를 포함한 스테이징 디렉터리를 만들고 WiX Toolset 5로 x64 MSI를 생성합니다. WiX는 `build/tools/wix` 아래에 버전 고정으로 설치되며 시스템 전역 설치를 변경하지 않습니다.
+
+MSI는 HKLM에 `.lmdb` ProgID, 열기/풀기 명령, 폴더 묶기, 파일 추가 메뉴를 등록합니다. 휴대용 앱의 메뉴는 HKCU 통합만 관리하며, HKLM 설치를 감지하면 MSI가 관리 중임을 안내합니다. 설치 정의를 바꾼 뒤에는 관리자 설치·제거 시험과 `wix msi validate`를 모두 통과시켜야 합니다.

@@ -1,5 +1,6 @@
 /build*/
 /out/
+/.wix/
 /.vs/
 /.vscode/
 CMakeUserPresets.json
@@ -7,4 +8,3 @@ CMakeUserPresets.json
 *.lmdb
 *.lmdb-lock
 *.pdb
-

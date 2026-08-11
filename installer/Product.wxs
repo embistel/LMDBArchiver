@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="LMDB Archiver"
+           Manufacturer="embistel"
+           Version="$(Version)"
+           UpgradeCode="EECAB4C2-AB2B-4A24-B1F0-2694FA78047F"
+           Scope="perMachine"
+           Codepage="65001"
+           InstallerVersion="500"
+           Compressed="yes">
+    <SummaryInformation Description="LMDB Archiver for Windows" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of LMDB Archiver is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Property Id="ARPNOREPAIR" Value="1" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/embistel/LMDBArchiver" />
+    <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
+    <Icon Id="ProductIcon" SourceFile="resources\app.ico" />
+
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="installer\license.rtf" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="LMDB Archiver" />
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="LMDB Archiver" Level="1">
+      <ComponentRef Id="MainExecutableComponent" />
+      <ComponentRef Id="CliExecutableComponent" />
+      <ComponentRef Id="ShellIntegrationComponent" />
+      <Files Include="!(bindpath.Payload)\**" Directory="INSTALLFOLDER">
+        <Exclude Files="!(bindpath.Payload)\LMDBArchiver.exe" />
+        <Exclude Files="!(bindpath.Payload)\LMDBArchiverCLI.exe" />
+      </Files>
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="MainExecutableComponent" Guid="*">
+        <File Id="MainExecutable" Source="!(bindpath.Payload)\LMDBArchiver.exe" KeyPath="yes">
+          <Shortcut Id="StartMenuShortcut"
+                    Directory="ProgramMenuFolder"
+                    Name="LMDB Archiver"
+                    Description="LMDB archive manager"
+                    WorkingDirectory="INSTALLFOLDER"
+                    Advertise="yes" />
+        </File>
+      </Component>
+
+      <Component Id="CliExecutableComponent" Guid="*">
+        <File Id="CliExecutable" Source="!(bindpath.Payload)\LMDBArchiverCLI.exe" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ShellIntegrationComponent" Guid="*">
+        <RegistryValue Root="HKLM" Key="Software\Classes\.lmdb"
+                       Value="LMDBArchiver.Archive" Type="string" KeyPath="yes" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.lmdb\OpenWithProgids"
+                       Name="LMDBArchiver.Archive" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\LMDBArchiver.Archive"
+                       Value="LMDB Archive" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\LMDBArchiver.Archive"
+                       Name="FriendlyTypeName" Value="LMDB Archive" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\LMDBArchiver.Archive\DefaultIcon"
+                       Value="&quot;[INSTALLFOLDER]LMDBArchiver.exe&quot;,0" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\LMDBArchiver.Archive\shell\open\command"
+                       Value="&quot;[INSTALLFOLDER]LMDBArchiver.exe&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\LMDBArchiver.Archive\shell\extract"
+                       Value="여기에 풀기" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\LMDBArchiver.Archive\shell\extract"
+                       Name="Icon" Value="[INSTALLFOLDER]LMDBArchiver.exe" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\LMDBArchiver.Archive\shell\extract\command"
+                       Value="&quot;[INSTALLFOLDER]LMDBArchiver.exe&quot; --extract-here &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\LMDBArchiver.exe\SupportedTypes"
+                       Name=".lmdb" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\LMDBArchiver.exe\shell\open\command"
+                       Value="&quot;[INSTALLFOLDER]LMDBArchiver.exe&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\SystemFileAssociations\.lmdb\shell\LMDBArchiver.Extract"
+                       Value="여기에 풀기" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\SystemFileAssociations\.lmdb\shell\LMDBArchiver.Extract"
+                       Name="Icon" Value="[INSTALLFOLDER]LMDBArchiver.exe" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\SystemFileAssociations\.lmdb\shell\LMDBArchiver.Extract\command"
+                       Value="&quot;[INSTALLFOLDER]LMDBArchiver.exe&quot; --extract-here &quot;%1&quot;" Type="string" />
+
+        <RegistryValue Root="HKLM" Key="Software\Classes\Directory\shell\LMDBArchiver.Pack"
+                       Value="LMDB 아카이브로 묶기" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Directory\shell\LMDBArchiver.Pack"
+                       Name="Icon" Value="[INSTALLFOLDER]LMDBArchiver.exe" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Directory\shell\LMDBArchiver.Pack\command"
+                       Value="&quot;[INSTALLFOLDER]LMDBArchiver.exe&quot; --create-from &quot;%1&quot;" Type="string" />
+
+        <RegistryValue Root="HKLM" Key="Software\Classes\Directory\Background\shell\LMDBArchiver.PackHere"
+                       Value="현재 폴더를 LMDB 아카이브로 묶기" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Directory\Background\shell\LMDBArchiver.PackHere"
+                       Name="Icon" Value="[INSTALLFOLDER]LMDBArchiver.exe" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Directory\Background\shell\LMDBArchiver.PackHere\command"
+                       Value="&quot;[INSTALLFOLDER]LMDBArchiver.exe&quot; --create-from &quot;%V&quot;" Type="string" />
+
+        <RegistryValue Root="HKLM" Key="Software\Classes\*\shell\LMDBArchiver.Add"
+                       Value="LMDB 아카이브에 추가..." Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\*\shell\LMDBArchiver.Add"
+                       Name="Icon" Value="[INSTALLFOLDER]LMDBArchiver.exe" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\*\shell\LMDBArchiver.Add\command"
+                       Value="&quot;[INSTALLFOLDER]LMDBArchiver.exe&quot; --add-dialog &quot;%1&quot;" Type="string" />
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+</Wix>

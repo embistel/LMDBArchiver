@@ -34,10 +34,12 @@ Qt 설치 위치가 다르면 `QT_ROOT`만 변경하십시오. Visual Studio Dev
 
 ## 사용법
 
+Windows에서는 `out/LMDBArchiver-<version>-x64.msi` 설치를 권장합니다. MSI는 프로그램을 `Program Files`에 설치하고 모든 사용자용 `.lmdb` 파일 연결과 Explorer 우클릭 메뉴를 자동으로 등록합니다. Windows 11에서는 우클릭 후 **추가 옵션 표시** 안에 메뉴가 나타날 수 있습니다.
+
 1. **파일 → 새 아카이브**로 `.lmdb` 파일을 만듭니다.
 2. 도구 모음의 **파일 추가**/**폴더 추가**, 드래그앤드롭 또는 Explorer에서 복사한 뒤 `Ctrl+V`로 항목을 넣습니다.
 3. 트리에서 여러 항목을 선택해 풀거나 삭제합니다. 같은 내부 경로에 다시 추가하면 최신 내용으로 교체됩니다.
-4. **도구 → Windows 탐색기 통합**으로 현재 사용자용 파일 연결과 우클릭 메뉴를 설치합니다.
+4. 휴대용 ZIP을 사용한다면 **도구 → Windows 탐색기 통합**으로 현재 사용자용 파일 연결과 우클릭 메뉴를 설치합니다. MSI 설치에서는 이 작업이 자동입니다.
 
 상세 내용은 [사용자 안내서](docs/USER_GUIDE.ko.md)와 [개발자 안내서](docs/DEVELOPMENT.md)를 참고하십시오.
 
@@ -58,6 +60,16 @@ LMDBArchiverCLI compact photos.lmdb
 `create`는 기존 아카이브를 덮어쓰지 않습니다. `extract`에서 내부 경로를 생략하면 전체를 풉니다.
 
 ## 패키지
+
+권장 MSI 설치 패키지:
+
+```powershell
+scripts\build-msi.ps1 -BuildDirectory build\release -QtBin F:\Qt\6.11.0\msvc2022_64\bin
+```
+
+스크립트는 고정된 WiX Toolset 5를 로컬 빌드 디렉터리에 준비하고, 휴대용 배포 파일을 스테이징한 뒤 `out/LMDBArchiver-<version>-x64.msi`를 생성하고 검사합니다. 생성된 MSI는 아직 코드 서명되지 않았으므로 외부 배포 시 Windows 코드 서명 인증서로 서명하는 것을 권장합니다.
+
+휴대용 ZIP:
 
 ```powershell
 scripts\package.ps1 -BuildDirectory build\release -QtBin F:\Qt\6.11.0\msvc2022_64\bin

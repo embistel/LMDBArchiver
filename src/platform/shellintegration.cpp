@@ -128,8 +128,17 @@ bool ShellIntegration::isInstalled()
     if (key) RegCloseKey(key);
     return result == ERROR_SUCCESS;
 }
+bool ShellIntegration::isMachineInstalled()
+{
+    HKEY key = nullptr;
+    const LONG result = RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+        L"Software\\Classes\\LMDBArchiver.Archive", 0, KEY_READ, &key);
+    if (key) RegCloseKey(key);
+    return result == ERROR_SUCCESS;
+}
 #else
 bool ShellIntegration::install(const QString &, QString *error) { if (error) *error = QStringLiteral("Windows에서만 지원됩니다."); return false; }
 bool ShellIntegration::uninstall(QString *error) { if (error) *error = QStringLiteral("Windows에서만 지원됩니다."); return false; }
 bool ShellIntegration::isInstalled() { return false; }
+bool ShellIntegration::isMachineInstalled() { return false; }
 #endif

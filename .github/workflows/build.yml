@@ -20,6 +20,18 @@ jobs:
         run: cmake --build build
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Package MSI and portable ZIP
+        shell: pwsh
+        run: |
+          $qtBin = Split-Path (Get-Command windeployqt).Source
+          ./scripts/build-msi.ps1 -BuildDirectory build -QtBin $qtBin
+      - name: Upload Windows packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: LMDBArchiver-windows
+          path: |
+            out/*.msi
+            out/*.zip
 
   unix:
     strategy:

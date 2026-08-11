@@ -59,6 +59,9 @@ add_executable(LMDBArchiver WIN32
     src/platform/shellintegration.h
     resources/resources.qrc
 )
+if(WIN32)
+    target_sources(LMDBArchiver PRIVATE resources/windows.rc)
+endif()
 target_link_libraries(LMDBArchiver PRIVATE lmdbarchiver_core Qt${QT_VERSION_MAJOR}::Widgets)
 if(WIN32)
     target_link_libraries(LMDBArchiver PRIVATE Advapi32 Shell32)
