@@ -76,13 +76,6 @@
                        Name=".lmdb" Value="" Type="string" />
         <RegistryValue Root="HKLM" Key="Software\Classes\Applications\LMDBArchiver.exe\shell\open\command"
                        Value="&quot;[INSTALLFOLDER]LMDBArchiver.exe&quot; &quot;%1&quot;" Type="string" />
-        <RegistryValue Root="HKLM" Key="Software\Classes\SystemFileAssociations\.lmdb\shell\LMDBArchiver.Extract"
-                       Value="여기에 풀기" Type="string" />
-        <RegistryValue Root="HKLM" Key="Software\Classes\SystemFileAssociations\.lmdb\shell\LMDBArchiver.Extract"
-                       Name="Icon" Value="[INSTALLFOLDER]LMDBArchiver.exe" Type="string" />
-        <RegistryValue Root="HKLM" Key="Software\Classes\SystemFileAssociations\.lmdb\shell\LMDBArchiver.Extract\command"
-                       Value="&quot;[INSTALLFOLDER]LMDBArchiver.exe&quot; --extract-here &quot;%1&quot;" Type="string" />
-
         <RegistryValue Root="HKLM" Key="Software\Classes\Directory\shell\LMDBArchiver.Pack"
                        Value="LMDB 아카이브로 묶기" Type="string" />
         <RegistryValue Root="HKLM" Key="Software\Classes\Directory\shell\LMDBArchiver.Pack"

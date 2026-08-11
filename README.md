@@ -2,6 +2,10 @@
 
 LMDB Archiver는 Windows 탐색기와 자연스럽게 연결되는 C++17/Qt 6 기반 데스크톱 아카이브 관리자입니다. LMDB의 ACID 트랜잭션과 메모리 맵 I/O를 저장 계층으로 사용하고, 파일 페이로드는 Qt의 zlib 압축으로 보관합니다.
 
+![LMDB Archiver에서 폴더와 파일을 탐색하는 화면](docs/images/archive-browser.png)
+
+**[최신 Windows 설치본(MSI) 다운로드](https://github.com/embistel/LMDBArchiver/releases/latest)** · [사용자 안내서](docs/USER_GUIDE.ko.md) · [빌드 방법](docs/DEVELOPMENT.md)
+
 ## 주요 기능
 
 - 파일과 디렉터리 전체를 단일 `.lmdb` 아카이브에 추가
@@ -34,7 +38,7 @@ Qt 설치 위치가 다르면 `QT_ROOT`만 변경하십시오. Visual Studio Dev
 
 ## 사용법
 
-Windows에서는 `out/LMDBArchiver-<version>-x64.msi` 설치를 권장합니다. MSI는 프로그램을 `Program Files`에 설치하고 모든 사용자용 `.lmdb` 파일 연결과 Explorer 우클릭 메뉴를 자동으로 등록합니다. Windows 11에서는 우클릭 후 **추가 옵션 표시** 안에 메뉴가 나타날 수 있습니다.
+Windows에서는 [GitHub Releases](https://github.com/embistel/LMDBArchiver/releases/latest)의 `LMDBArchiver-<version>-x64.msi` 설치를 권장합니다. MSI는 프로그램을 `Program Files`에 설치하고 모든 사용자용 `.lmdb` 파일 연결과 Explorer 우클릭 메뉴를 자동으로 등록합니다. Windows 11에서는 우클릭 후 **추가 옵션 표시** 안에 메뉴가 나타날 수 있습니다.
 
 1. **파일 → 새 아카이브**로 `.lmdb` 파일을 만듭니다.
 2. 도구 모음의 **파일 추가**/**폴더 추가**, 드래그앤드롭 또는 Explorer에서 복사한 뒤 `Ctrl+V`로 항목을 넣습니다.

@@ -23,6 +23,7 @@ Copy-Item -LiteralPath (Join-Path $projectRoot "README.md") -Destination $stage
 Copy-Item -LiteralPath (Join-Path $projectRoot "LICENSE") -Destination $stage
 Copy-Item -LiteralPath (Join-Path $projectRoot "THIRD_PARTY_NOTICES.md") -Destination $stage
 Copy-Item -LiteralPath (Join-Path $projectRoot "docs\USER_GUIDE.ko.md") -Destination $stage
+Copy-Item -LiteralPath (Join-Path $projectRoot "docs\images") -Destination (Join-Path $stage "images") -Recurse
 $lmdbLicense = Join-Path $buildPath "_deps\lmdb-src\libraries\liblmdb\LICENSE"
 if (Test-Path -LiteralPath $lmdbLicense) { Copy-Item -LiteralPath $lmdbLicense -Destination (Join-Path $stage "LICENSE-LMDB.txt") }
 $qtSdkRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $QtBin))
