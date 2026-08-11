@@ -1,0 +1,23 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "qt-msvc-release",
+      "displayName": "Qt 6 / MSVC Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
+        "BUILD_TESTING": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "release", "configurePreset": "qt-msvc-release" }
+  ],
+  "testPresets": [
+    { "name": "release", "configurePreset": "qt-msvc-release", "output": { "outputOnFailure": true } }
+  ]
+}
+

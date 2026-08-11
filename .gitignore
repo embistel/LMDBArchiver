@@ -1,0 +1,10 @@
+/build*/
+/out/
+/.vs/
+/.vscode/
+CMakeUserPresets.json
+*.user
+*.lmdb
+*.lmdb-lock
+*.pdb
+
