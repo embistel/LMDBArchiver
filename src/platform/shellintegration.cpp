@@ -7,11 +7,13 @@
 
 namespace {
 constexpr wchar_t kRoot[] = L"Software\\Classes";
+constexpr wchar_t kStatePath[] = L"Software\\embistel\\LMDBArchiver";
+constexpr auto kProgId = "LMDBArchiver.Archive";
+constexpr auto kNoAssociation = "<none>";
 
-bool setValue(const QString &subkey, const QString &name, const QString &value, QString *error)
+bool setRawValue(const QString &path, const QString &name, const QString &value, QString *error)
 {
     HKEY key = nullptr;
-    const QString path = QString::fromWCharArray(kRoot) + u'\\' + subkey;
     LONG result = RegCreateKeyExW(HKEY_CURRENT_USER, reinterpret_cast<LPCWSTR>(path.utf16()), 0, nullptr,
                                   0, KEY_WRITE, nullptr, &key, nullptr);
     if (result == ERROR_SUCCESS) {
@@ -24,22 +26,62 @@ bool setValue(const QString &subkey, const QString &name, const QString &value, 
     return result == ERROR_SUCCESS;
 }
 
-bool removeTree(const QString &subkey, QString *error)
+bool setValue(const QString &subkey, const QString &name, const QString &value, QString *error)
 {
-    const QString path = QString::fromWCharArray(kRoot) + u'\\' + subkey;
+    return setRawValue(QString::fromWCharArray(kRoot) + u'\\' + subkey, name, value, error);
+}
+
+QString readRawValue(const QString &path, const QString &name, bool *exists = nullptr)
+{
+    if (exists) *exists = false;
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, reinterpret_cast<LPCWSTR>(path.utf16()), 0, KEY_READ, &key) != ERROR_SUCCESS)
+        return {};
+    DWORD type = 0;
+    DWORD bytes = 0;
+    LONG result = RegQueryValueExW(key, name.isEmpty() ? nullptr : reinterpret_cast<LPCWSTR>(name.utf16()),
+                                   nullptr, &type, nullptr, &bytes);
+    QString value;
+    if (result == ERROR_SUCCESS && type == REG_SZ && bytes >= sizeof(wchar_t)) {
+        value.resize(qsizetype(bytes / sizeof(wchar_t)));
+        result = RegQueryValueExW(key, name.isEmpty() ? nullptr : reinterpret_cast<LPCWSTR>(name.utf16()),
+                                  nullptr, &type, reinterpret_cast<BYTE *>(value.data()), &bytes);
+        if (!value.isEmpty() && value.back() == u'\0') value.chop(1);
+    }
+    RegCloseKey(key);
+    if (result == ERROR_SUCCESS && exists) *exists = true;
+    return result == ERROR_SUCCESS ? value : QString{};
+}
+
+bool removeRawTree(const QString &path, QString *error)
+{
     const LONG result = RegDeleteTreeW(HKEY_CURRENT_USER, reinterpret_cast<LPCWSTR>(path.utf16()));
     if (result != ERROR_SUCCESS && result != ERROR_FILE_NOT_FOUND && error)
         *error = QStringLiteral("레지스트리 삭제 오류: %1").arg(result);
     return result == ERROR_SUCCESS || result == ERROR_FILE_NOT_FOUND;
 }
+
+bool removeTree(const QString &subkey, QString *error)
+{
+    return removeRawTree(QString::fromWCharArray(kRoot) + u'\\' + subkey, error);
+}
 }
 
 bool ShellIntegration::install(const QString &executable, QString *error)
 {
+    if (error) error->clear();
     const QString exe = QDir::toNativeSeparators(executable);
     const QString quoted = u'"' + exe + u'"';
+    const QString associationPath = QString::fromWCharArray(kRoot) + QStringLiteral("\\.lmdb");
+    bool associationExists = false;
+    const QString previousAssociation = readRawValue(associationPath, {}, &associationExists);
+    if (previousAssociation != QString::fromLatin1(kProgId)) {
+        const QString backup = associationExists ? previousAssociation : QString::fromLatin1(kNoAssociation);
+        if (!setRawValue(QString::fromWCharArray(kStatePath), QStringLiteral("PreviousLmdbAssociation"), backup, error))
+            return false;
+    }
     bool ok = true;
-    ok &= setValue(QStringLiteral(".lmdb"), {}, QStringLiteral("LMDBArchiver.Archive"), error);
+    ok &= setValue(QStringLiteral(".lmdb"), {}, QString::fromLatin1(kProgId), error);
     ok &= setValue(QStringLiteral("LMDBArchiver.Archive"), {}, QStringLiteral("LMDB Archive"), error);
     ok &= setValue(QStringLiteral("LMDBArchiver.Archive\\DefaultIcon"), {}, quoted + QStringLiteral(",0"), error);
     ok &= setValue(QStringLiteral("LMDBArchiver.Archive\\shell\\open\\command"), {}, quoted + QStringLiteral(" \"%1\""), error);
@@ -56,10 +98,24 @@ bool ShellIntegration::install(const QString &executable, QString *error)
 
 bool ShellIntegration::uninstall(QString *error)
 {
-    bool ok = removeTree(QStringLiteral(".lmdb"), error);
+    if (error) error->clear();
+    const QString associationPath = QString::fromWCharArray(kRoot) + QStringLiteral("\\.lmdb");
+    bool associationExists = false;
+    const QString currentAssociation = readRawValue(associationPath, {}, &associationExists);
+    bool backupExists = false;
+    const QString backup = readRawValue(QString::fromWCharArray(kStatePath),
+                                        QStringLiteral("PreviousLmdbAssociation"), &backupExists);
+    bool ok = true;
+    if (associationExists && currentAssociation == QString::fromLatin1(kProgId)) {
+        if (backupExists && backup != QString::fromLatin1(kNoAssociation))
+            ok &= setValue(QStringLiteral(".lmdb"), {}, backup, error);
+        else
+            ok &= removeTree(QStringLiteral(".lmdb"), error);
+    }
     ok &= removeTree(QStringLiteral("LMDBArchiver.Archive"), error);
     ok &= removeTree(QStringLiteral("Directory\\shell\\LMDBArchiver.Pack"), error);
     ok &= removeTree(QStringLiteral("*\\shell\\LMDBArchiver.Add"), error);
+    ok &= removeRawTree(QString::fromWCharArray(kStatePath), error);
     SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
     return ok;
 }

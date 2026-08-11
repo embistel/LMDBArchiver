@@ -6,11 +6,14 @@ LMDB Archiver는 Windows 탐색기와 자연스럽게 연결되는 C++17/Qt 6 �
 
 - 파일과 디렉터리 전체를 단일 `.lmdb` 아카이브에 추가
 - 기존 아카이브의 트리 탐색, 검색, 덮어쓰기, 삭제, 선택/전체 추출
-- Windows Explorer에서 끌어다 놓기 및 파일 복사 후 `Ctrl+V`
+- Windows Explorer에서 양방향 끌어다 놓기, 파일 복사 후 `Ctrl+V`, 아카이브 항목 `Ctrl+C` 후 Explorer 붙여넣기
 - `.lmdb` 더블 클릭 열기, **여기에 풀기**, 폴더 **LMDB 아카이브로 묶기** 우클릭 메뉴
 - UTF-8 경로, 수정 시간과 파일 권한 보존, 경로 순회 공격 방지
+- 4 MiB 청크 스트리밍으로 대용량 파일을 일정한 메모리 사용량으로 처리
 - 손상 없는 업데이트를 위한 LMDB 트랜잭션
-- Qt 6.2 이상을 목표로 하며 Qt 6.11/MSVC 2022에서 검증
+- 모든 데이터 청크의 SHA-256 검증과 GUI/CLI 아카이브 검사
+- 삭제 후 빈 LMDB 페이지를 회수하는 원자적 아카이브 압축 정리
+- Qt 6.2 이상을 목표로 하며 Qt 6.11/MSVC 2022 로컬 빌드와 Windows/Linux/macOS CI 구성 제공
 
 > LMDB는 압축 포맷이 아니라 키-값 데이터베이스입니다. 이 프로젝트는 LMDB 레코드 내부에 압축된 파일 데이터와 메타데이터를 저장하는 자체 포맷을 정의합니다. 다른 LMDB 도구가 파일을 직접 추출할 수는 없습니다.
 
@@ -37,6 +40,22 @@ Qt 설치 위치가 다르면 `QT_ROOT`만 변경하십시오. Visual Studio Dev
 4. **도구 → Windows 탐색기 통합**으로 현재 사용자용 파일 연결과 우클릭 메뉴를 설치합니다.
 
 상세 내용은 [사용자 안내서](docs/USER_GUIDE.ko.md)와 [개발자 안내서](docs/DEVELOPMENT.md)를 참고하십시오.
+
+### 명령줄 자동화
+
+배포 패키지의 `LMDBArchiverCLI.exe`는 대화상자 없이 같은 코어를 사용합니다.
+
+```powershell
+LMDBArchiverCLI create photos.lmdb C:\Photos
+LMDBArchiverCLI add photos.lmdb C:\More --destination imports
+LMDBArchiverCLI list photos.lmdb
+LMDBArchiverCLI extract photos.lmdb C:\Restored Photos\2026
+LMDBArchiverCLI remove photos.lmdb imports\obsolete.jpg
+LMDBArchiverCLI test photos.lmdb
+LMDBArchiverCLI compact photos.lmdb
+```
+
+`create`는 기존 아카이브를 덮어쓰지 않습니다. `extract`에서 내부 경로를 생략하면 전체를 풉니다.
 
 ## 패키지
 

@@ -1,6 +1,14 @@
 <RCC>
   <qresource prefix="/icons">
     <file>app.svg</file>
+    <file>new.svg</file>
+    <file>open.svg</file>
+    <file>add-file.svg</file>
+    <file>add-folder.svg</file>
+    <file>extract.svg</file>
+    <file>copy.svg</file>
+    <file>delete.svg</file>
+    <file>verify.svg</file>
+    <file>compact.svg</file>
   </qresource>
 </RCC>
-

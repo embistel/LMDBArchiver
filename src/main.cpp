@@ -24,8 +24,10 @@ int main(int argc, char *argv[])
         "QTreeView { background: #ffffff; border: 1px solid #d9dee8; border-radius: 8px; alternate-background-color: #f8faff; padding: 3px; }"
         "QTreeView::item { min-height: 28px; }"
         "QTreeView::item:selected { background: #cfe3ff; color: #10243e; border-radius: 4px; }"
+        "QFrame#ArchiveBanner { background: #ffffff; border: 1px solid #d9dee8; border-radius: 9px; }"
+        "QLabel#ArchiveName { color: #14213d; font-size: 15px; font-weight: 700; }"
+        "QLabel#ArchiveLocation { color: #667085; font-size: 9pt; }"
         "QHeaderView::section { background: #eef1f6; border: 0; border-right: 1px solid #d7dce5; border-bottom: 1px solid #d7dce5; padding: 7px; font-weight: 600; }"
         "QStatusBar { background: #ffffff; border-top: 1px solid #dfe3eb; }"));
     return App::run(application);
 }
-

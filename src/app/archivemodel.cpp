@@ -10,8 +10,7 @@ ArchiveModel::ArchiveModel(QObject *parent) : QStandardItemModel(parent)
 
 void ArchiveModel::setEntries(const QList<ArchiveEntry> &entries, const QString &filter)
 {
-    clear();
-    setHorizontalHeaderLabels({tr("이름"), tr("크기"), tr("저장 크기"), tr("수정한 날짜"), tr("형식")});
+    removeRows(0, rowCount());
     QFileIconProvider icons;
     QHash<QString, QStandardItem *> folders;
     folders.insert(QString{}, invisibleRootItem());
@@ -57,4 +56,3 @@ QString ArchiveModel::pathForIndex(const QModelIndex &index) const
 {
     return index.siblingAtColumn(0).data(PathRole).toString();
 }
-

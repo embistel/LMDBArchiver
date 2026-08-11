@@ -24,6 +24,9 @@ public:
     QString filePath() const { return m_filePath; }
 
     QList<ArchiveEntry> entries(QString *error = nullptr) const;
+    bool clear(QString *error = nullptr);
+    bool compact(QString *error = nullptr);
+    bool verify(QString *error = nullptr, const Progress &progress = {}) const;
     bool addPaths(const QStringList &paths, const QString &destination = {},
                   QString *error = nullptr, const Progress &progress = {});
     bool removePaths(const QStringList &archivePaths, QString *error = nullptr);
@@ -38,4 +41,3 @@ private:
     MDB_env *m_env = nullptr;
     QString m_filePath;
 };
-

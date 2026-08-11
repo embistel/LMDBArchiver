@@ -10,6 +10,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 include(FetchContent)
+find_package(Threads REQUIRED)
 find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets)
 
@@ -30,6 +31,7 @@ add_library(lmdb_vendor STATIC
     ${lmdb_SOURCE_DIR}/libraries/liblmdb/midl.c
 )
 target_include_directories(lmdb_vendor PUBLIC ${lmdb_SOURCE_DIR}/libraries/liblmdb)
+target_link_libraries(lmdb_vendor PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
 if(WIN32)
     target_compile_definitions(lmdb_vendor PRIVATE _CRT_SECURE_NO_WARNINGS)
     target_link_libraries(lmdb_vendor PRIVATE Advapi32)
@@ -61,6 +63,13 @@ target_link_libraries(LMDBArchiver PRIVATE lmdbarchiver_core Qt${QT_VERSION_MAJO
 if(WIN32)
     target_link_libraries(LMDBArchiver PRIVATE Advapi32 Shell32)
 endif()
+
+add_executable(LMDBArchiverCLI src/cli/main.cpp)
+target_link_libraries(LMDBArchiverCLI PRIVATE lmdbarchiver_core Qt${QT_VERSION_MAJOR}::Core)
+target_compile_definitions(LMDBArchiverCLI PRIVATE LMDBARCHIVER_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(LMDBArchiverCLI PRIVATE /W4 /permissive- /utf-8)
+endif()
 target_compile_definitions(LMDBArchiver PRIVATE
     LMDBARCHIVER_VERSION="${PROJECT_VERSION}"
     QT_NO_CAST_FROM_ASCII
@@ -73,7 +82,7 @@ if(MSVC)
 endif()
 
 include(GNUInstallDirs)
-install(TARGETS LMDBArchiver RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS LMDBArchiver LMDBArchiverCLI RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES README.md LICENSE DESTINATION .)
 
 include(CTest)

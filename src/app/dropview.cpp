@@ -8,8 +8,19 @@
 DropView::DropView(QWidget *parent) : QTreeView(parent)
 {
     setAcceptDrops(true);
-    setDragDropMode(QAbstractItemView::DropOnly);
+    setDragEnabled(true);
+    setDragDropMode(QAbstractItemView::DragDrop);
     setDropIndicatorShown(true);
+}
+
+void DropView::startDrag(Qt::DropActions)
+{
+    QStringList paths;
+    for (const QModelIndex &index : selectionModel()->selectedRows(0))
+        paths << index.data(ArchiveModel::PathRole).toString();
+    paths.removeAll(QString{});
+    paths.removeDuplicates();
+    if (!paths.isEmpty()) emit archiveDragRequested(paths);
 }
 
 void DropView::dragEnterEvent(QDragEnterEvent *event)
@@ -36,4 +47,3 @@ void DropView::dropEvent(QDropEvent *event)
     emit localFilesDropped(paths, destination);
     event->acceptProposedAction();
 }
-
