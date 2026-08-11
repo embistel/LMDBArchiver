@@ -1,10 +1,22 @@
 # LMDB Archiver
 
-LMDB Archiver는 Windows 탐색기와 자연스럽게 연결되는 C++17/Qt 6 기반 데스크톱 아카이브 관리자입니다. LMDB의 ACID 트랜잭션과 메모리 맵 I/O를 저장 계층으로 사용하고, 파일 페이로드는 Qt의 zlib 압축으로 보관합니다.
+LMDB Archiver는 Windows 탐색기와 자연스럽게 연결되는 C++17/Qt 6 기반 데스크톱 아카이브 관리자입니다. [LMDB (Lightning Memory-Mapped Database)](https://github.com/LMDB/lmdb)의 ACID 트랜잭션과 메모리 맵 I/O를 저장 계층으로 사용하고, 파일 페이로드는 Qt의 zlib 압축으로 보관합니다.
 
 ![LMDB Archiver에서 폴더와 파일을 탐색하는 화면](docs/images/archive-browser.png)
 
 **[최신 Windows 설치본(MSI) 다운로드](https://github.com/embistel/LMDBArchiver/releases/latest)** · [사용자 안내서](docs/USER_GUIDE.ko.md) · [빌드 방법](docs/DEVELOPMENT.md)
+
+## LMDB를 선택한 이유
+
+[LMDB](https://github.com/LMDB/lmdb)는 OpenLDAP 프로젝트를 위해 개발된 작고 빠른 임베디드 키-값 데이터베이스입니다. 이 프로젝트는 공식 GitHub 미러의 `LMDB_0.9.33` 소스를 CMake에서 직접 가져와 정적으로 연결합니다.
+
+- **메모리 매핑과 zero-copy 읽기**: 운영체제의 가상 메모리와 버퍼 캐시를 활용해 별도 애플리케이션 캐시 없이 데이터를 효율적으로 조회합니다.
+- **완전한 ACID 트랜잭션과 MVCC**: 아카이브 갱신 도중 오류나 취소가 발생해도 커밋 전 상태를 유지합니다.
+- **읽기 중심 동시성**: 여러 읽기 트랜잭션이 쓰기와 서로 막지 않으며, 쓰기는 직렬화되어 교착 상태를 피합니다.
+- **정렬된 B+tree 저장소**: 키가 정렬되어 있어 아카이브 항목의 순차 탐색과 접두 경로 검색에 잘 맞습니다.
+- **작고 유지 관리가 단순한 C 라이브러리**: 별도 서버, 로그 기반 복구 프로세스 또는 백그라운드 정리 서비스가 필요하지 않습니다.
+
+LMDB 자체는 압축 포맷이 아닙니다. LMDB Archiver가 그 위에 디렉터리 메타데이터, 4 MiB 청크, SHA-256 무결성 정보와 Qt zlib 압축을 결합해 하나의 `.lmdb` 아카이브 형식을 제공합니다. 자세한 원리는 [LMDB 기술 소개](https://www.symas.com/lmdb.php)와 [OpenLDAP 프로젝트](https://project.openldap.org/)에서 확인할 수 있습니다.
 
 ## 주요 기능
 
