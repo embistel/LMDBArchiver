@@ -13,7 +13,7 @@ $stage = Join-Path $projectRoot "out\LMDBArchiver-$Version-win64"
 $output = Join-Path $projectRoot "out\LMDBArchiver-$Version-x64.msi"
 $intermediate = Join-Path $projectRoot "build\msi"
 
-& (Join-Path $PSScriptRoot "package.ps1") -BuildDirectory $BuildDirectory -QtBin $QtBin
+& (Join-Path $PSScriptRoot "package.ps1") -BuildDirectory $BuildDirectory -QtBin $QtBin -Version $Version
 if ($LASTEXITCODE -ne 0) { throw "Portable package staging failed with exit code $LASTEXITCODE" }
 
 if (-not (Test-Path -LiteralPath $wix)) {

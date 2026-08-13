@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $false)] [string] $BuildDirectory = "build/release",
-    [Parameter(Mandatory = $false)] [string] $QtBin = $env:QT_ROOT + "\bin"
+    [Parameter(Mandatory = $false)] [string] $QtBin = $env:QT_ROOT + "\bin",
+    [Parameter(Mandatory = $false)] [string] $Version = "0.1.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,7 +10,7 @@ $buildPath = [System.IO.Path]::GetFullPath((Join-Path $projectRoot $BuildDirecto
 $executable = Join-Path $buildPath "LMDBArchiver.exe"
 $cliExecutable = Join-Path $buildPath "LMDBArchiverCLI.exe"
 $deployTool = Join-Path $QtBin "windeployqt.exe"
-$stage = Join-Path $projectRoot "out\LMDBArchiver-0.1.0-win64"
+$stage = Join-Path $projectRoot "out\LMDBArchiver-$Version-win64"
 $archive = "$stage.zip"
 
 if (-not (Test-Path -LiteralPath $executable)) { throw "Build output not found: $executable" }
