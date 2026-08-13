@@ -39,6 +39,29 @@ QAction *makeAction(QObject *parent, const QIcon &icon, const QString &text,
     if (!shortcut.isEmpty()) action->setShortcut(shortcut);
     return action;
 }
+
+// Friendly two-line label shown in QProgressDialog. First line is the phase + current item,
+// second line is a byte-range + percentage (or just bytes when total is unknown).
+QString formatProgressLabel(ProgressPhase phase, const QString &item, qint64 bytesDone, qint64 bytesTotal)
+{
+    const QLocale locale;
+    QString phaseText;
+    switch (phase) {
+    case ProgressPhase::Collecting:  phaseText = MainWindow::tr("파일 수집 중…"); break;
+    case ProgressPhase::Processing:  phaseText = MainWindow::tr("처리 중…"); break;
+    case ProgressPhase::Finalizing:  phaseText = MainWindow::tr("변경 사항 저장 중…"); break;
+    }
+    if (bytesTotal > 0) {
+        const int percent = int((bytesDone * 100) / bytesTotal);
+        return phaseText + u'\n' + item
+            + MainWindow::tr("\n%1 / %2 (%3%)").arg(locale.formattedDataSize(bytesDone),
+                                                    locale.formattedDataSize(bytesTotal))
+                                               .arg(qBound(0, percent, 100));
+    }
+    if (bytesDone > 0)
+        return phaseText + u'\n' + item + u'\n' + locale.formattedDataSize(bytesDone);
+    return phaseText + u'\n' + item;
+}
 }
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
@@ -124,7 +147,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     m_verifyAction = makeAction(this, QIcon(QStringLiteral(":/icons/verify.svg")), tr("아카이브 검사(&T)"));
     m_compactAction = makeAction(this, QIcon(QStringLiteral(":/icons/compact.svg")), tr("아카이브 압축 정리(&C)"));
     auto *refreshAction = makeAction(this, style()->standardIcon(QStyle::SP_BrowserReload), tr("새로 고침"), QKeySequence::Refresh);
+    m_compressAction = makeAction(this, {}, tr("추가 시 gzip 압축(&Z)"));
+    m_compressAction->setCheckable(true);
+    m_compressAction->setToolTip(tr("켜면 파일을 추가할 때 표준 gzip으로 압축하여 저장합니다. 키가 \".<해시>.gz\" 표시로 자기 서술됩니다."));
     archiveMenu->addActions({m_extractAction, m_extractAllAction, m_verifyAction, m_compactAction, refreshAction});
+    archiveMenu->addSeparator();
+    archiveMenu->addAction(m_compressAction);
 
     auto *toolsMenu = menuBar()->addMenu(tr("도구(&T)"));
     auto *shellAction = makeAction(this, {}, tr("Windows 탐색기 통합..."));
@@ -166,10 +194,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     connect(m_view, &QWidget::customContextMenuRequested, this, &MainWindow::showEntryMenu);
     connect(m_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::updateActions);
     connect(m_search, &QLineEdit::textChanged, this, [this](const QString &text) { m_model->setEntries(m_entries, text); m_view->expandToDepth(0); });
+    connect(m_compressAction, &QAction::toggled, this, [this](bool on) {
+        QSettings().setValue(QStringLiteral("archive/compressOnAdd"), on);
+    });
     updateActions();
 
     QSettings settings;
     restoreGeometry(settings.value(QStringLiteral("window/geometry")).toByteArray());
+    m_compressAction->setChecked(settings.value(QStringLiteral("archive/compressOnAdd"), false).toBool());
 }
 
 bool MainWindow::openArchive(const QString &path)
@@ -326,15 +358,16 @@ void MainWindow::cleanStaleExports()
 bool MainWindow::addLocalPaths(const QStringList &paths, const QString &destination)
 {
     if (!m_archive.isOpen() || paths.isEmpty()) return false;
-    QProgressDialog dialog(tr("항목을 아카이브에 추가하는 중..."), tr("취소"), 0, paths.size(), this);
+    QProgressDialog dialog(tr("항목을 아카이브에 추가하는 중..."), tr("취소"), 0, 0, this);
     dialog.setWindowModality(Qt::WindowModal);
     dialog.setMinimumDuration(250);
     QString error;
+    const bool compress = m_compressAction->isChecked();
     const bool ok = m_archive.addPaths(paths, destination, &error,
-        [&dialog](const QString &path, qsizetype current, qsizetype total) {
-            dialog.setMaximum(int(total)); dialog.setValue(int(current)); dialog.setLabelText(path);
-            QApplication::processEvents(); return !dialog.wasCanceled();
-        });
+        [&dialog](const ProgressInfo &info) {
+            applyProgress(dialog, info);
+            return !dialog.wasCanceled();
+        }, compress);
     if (!ok) { showError(error.isEmpty() ? tr("추가 작업이 취소되었습니다.") : error); return false; }
     refresh();
     return true;
@@ -382,9 +415,8 @@ bool MainWindow::extractPaths(const QStringList &paths, const QString &destinati
     dialog.setMinimumDuration(250);
     QString error;
     const bool ok = m_archive.extract(paths, destination, &error,
-        [&dialog](const QString &path, qsizetype, qsizetype) {
-            dialog.setLabelText(path);
-            QApplication::processEvents();
+        [&dialog](const ProgressInfo &info) {
+            applyProgress(dialog, info);
             return !dialog.wasCanceled();
         });
     if (!ok) showError(error.isEmpty() ? tr("풀기 작업이 취소되었습니다.") : error);
@@ -393,18 +425,17 @@ bool MainWindow::extractPaths(const QStringList &paths, const QString &destinati
 
 void MainWindow::verifyArchive()
 {
-    QProgressDialog dialog(tr("아카이브 무결성을 검사하는 중..."), tr("취소"), 0, 0, this);
+    QProgressDialog dialog(tr("아카이브 레코드를 검사하는 중..."), tr("취소"), 0, 0, this);
     dialog.setWindowModality(Qt::WindowModal);
     dialog.setMinimumDuration(250);
     QString error;
     const bool ok = m_archive.verify(&error,
-        [&dialog](const QString &path, qsizetype, qsizetype) {
-            dialog.setLabelText(path);
-            QApplication::processEvents();
+        [&dialog](const ProgressInfo &info) {
+            applyProgress(dialog, info);
             return !dialog.wasCanceled();
         });
     if (!ok) showError(error.isEmpty() ? tr("검사 작업이 취소되었습니다.") : error);
-    else QMessageBox::information(this, tr("아카이브 검사"), tr("모든 항목의 크기와 SHA-256 데이터 검사가 통과했습니다."));
+    else QMessageBox::information(this, tr("아카이브 검사"), tr("모든 항목의 데이터가 정상적으로 읽혔습니다."));
 }
 
 void MainWindow::compactArchive()
@@ -480,3 +511,28 @@ void MainWindow::updateActions()
 }
 
 void MainWindow::showError(const QString &message) { QMessageBox::critical(this, tr("LMDB Archiver"), message); }
+
+QString MainWindow::phaseLabel(ProgressPhase phase, const QString &fallback)
+{
+    switch (phase) {
+    case ProgressPhase::Collecting:  return tr("파일 수집 중…");
+    case ProgressPhase::Processing:  return tr("처리 중…");
+    case ProgressPhase::Finalizing:  return tr("변경 사항 저장 중…");
+    }
+    return fallback;
+}
+
+void MainWindow::applyProgress(QProgressDialog &dialog, const ProgressInfo &info)
+{
+    dialog.setLabelText(formatProgressLabel(info.phase, info.currentItem, info.bytesDone, info.bytesTotal));
+    if (info.phase == ProgressPhase::Finalizing) {
+        dialog.setRange(0, 0);  // busy spinner while committing
+    } else if (info.bytesTotal > 0) {
+        const int percent = int((info.bytesDone * 100) / info.bytesTotal);
+        dialog.setRange(0, 100);
+        dialog.setValue(qBound(0, percent, 100));
+    } else {
+        dialog.setRange(0, 0);  // unknown total → indeterminate
+    }
+    QApplication::processEvents();
+}

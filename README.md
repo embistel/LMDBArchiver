@@ -1,6 +1,8 @@
 # LMDB Archiver
 
-LMDB Archiver는 Windows 탐색기와 자연스럽게 연결되는 C++17/Qt 6 기반 데스크톱 아카이브 관리자입니다. [LMDB (Lightning Memory-Mapped Database)](https://github.com/LMDB/lmdb)의 ACID 트랜잭션과 메모리 맵 I/O를 저장 계층으로 사용하고, 파일 페이로드는 Qt의 zlib 압축으로 보관합니다.
+**[English](README.en.md)** · 한국어
+
+LMDB Archiver는 Windows 탐색기와 자연스럽게 연결되는 C++17/Qt 6 기반 데스크톱 아카이브 관리자입니다. [LMDB (Lightning Memory-Mapped Database)](https://github.com/LMDB/lmdb)의 ACID 트랜잭션과 메모리 맵 I/O를 저장 계층으로 사용하고, **파일을 원본 바이트 그대로** 보관합니다(선택적 gzip 압축도 값이 아닌 키로 자기 서술). 헤더·래핑 없이 LucioraEla 원 시스템과 바이트 단위로 호환되는 순수 스키마입니다.
 
 ![LMDB Archiver에서 폴더와 파일을 탐색하는 화면](docs/images/archive-browser.png)
 
@@ -16,7 +18,7 @@ LMDB Archiver는 Windows 탐색기와 자연스럽게 연결되는 C++17/Qt 6 �
 - **정렬된 B+tree 저장소**: 키가 정렬되어 있어 아카이브 항목의 순차 탐색과 접두 경로 검색에 잘 맞습니다.
 - **작고 유지 관리가 단순한 C 라이브러리**: 별도 서버, 로그 기반 복구 프로세스 또는 백그라운드 정리 서비스가 필요하지 않습니다.
 
-LMDB 자체는 압축 포맷이 아닙니다. LMDB Archiver가 그 위에 디렉터리 메타데이터, 4 MiB 청크, SHA-256 무결성 정보와 Qt zlib 압축을 결합해 하나의 `.lmdb` 아카이브 형식을 제공합니다. 자세한 원리는 [LMDB 기술 소개](https://www.symas.com/lmdb.php)와 [OpenLDAP 프로젝트](https://project.openldap.org/)에서 확인할 수 있습니다.
+LMDB 자체는 압축 포맷이 아닙니다. LMDB Archiver는 LMDB를 있는 그대로 사용합니다 — **키는 UTF-8 경로, 값은 원본 파일 바이트**. 어떤 헤더·매직·압축도 붙이지 않아 Python `lmdb`, C liblmdb, C# 등 모든 표준 LMDB 도구가 아카이브를 직접 읽고 쓸 수 있습니다. 자세한 원리는 [LMDB 기술 소개](https://www.symas.com/lmdb.php)와 [OpenLDAP 프로젝트](https://project.openldap.org/)에서 확인할 수 있습니다.
 
 ## 주요 기능
 
@@ -24,14 +26,25 @@ LMDB 자체는 압축 포맷이 아닙니다. LMDB Archiver가 그 위에 디렉
 - 기존 아카이브의 트리 탐색, 검색, 덮어쓰기, 삭제, 선택/전체 추출
 - Windows Explorer에서 양방향 끌어다 놓기, 파일 복사 후 `Ctrl+V`, 아카이브 항목 `Ctrl+C` 후 Explorer 붙여넣기
 - `.lmdb` 더블 클릭 열기, **여기에 풀기**, 폴더 **LMDB 아카이브로 묶기** 우클릭 메뉴
-- UTF-8 경로, 수정 시간과 파일 권한 보존, 경로 순회 공격 방지
-- 4 MiB 청크 스트리밍으로 대용량 파일을 일정한 메모리 사용량으로 처리
+- UTF-8 경로 보존, 경로 순회 공격 방지
 - 손상 없는 업데이트를 위한 LMDB 트랜잭션
-- 모든 데이터 청크의 SHA-256 검증과 GUI/CLI 아카이브 검사
+- 모든 레코드의 가독성 검증 (GUI/CLI 아카이브 검사)
 - 삭제 후 빈 LMDB 페이지를 회수하는 원자적 아카이브 압축 정리
+- **LucioraEla 원 시스템 및 모든 표준 LMDB 도구와 바이트 수준 호환** — 본 프로그램 없이도 아카이브를 읽고 쓸 수 있음
+- **선택적 gzip 압축** — 추가 시 표준 gzip으로 압축 저장(키가 `.<해시>.gz` 표시로 자기 서술). 추출은 기본 자동 해제, `gunzip`으로 직접 풀어도 됨
 - Qt 6.2 이상을 목표로 하며 Qt 6.11/MSVC 2022 로컬 빌드와 Windows/Linux/macOS CI 구성 제공
 
-> LMDB는 압축 포맷이 아니라 키-값 데이터베이스입니다. 이 프로젝트는 LMDB 레코드 내부에 압축된 파일 데이터와 메타데이터를 저장하는 자체 포맷을 정의합니다. 다른 LMDB 도구가 파일을 직접 추출할 수는 없습니다.
+> **완전한 이식성**: 키는 UTF-8 경로 문자열, 값은 원본 파일 바이트입니다. 매직·헤더·압축이 없으므로 Python `lmdb`, C liblmdb, C# 어느 쪽이든 `mdb_get(키)`로 원본을 바로 꺼낼 수 있습니다.
+
+### Python에서 읽기
+
+```python
+import lmdb
+env = lmdb.open("wafer.lmdb", subdir=False, readonly=True, lock=False)
+with env.begin() as txn:
+    bmp_bytes = txn.get(b"Roi_0/Defect_000123.bmp")
+    # BMP 파일로 저장하면 원본 이미지가 그대로 복원됩니다
+```
 
 ## 빌드
 
@@ -65,9 +78,11 @@ Windows에서는 [GitHub Releases](https://github.com/embistel/LMDBArchiver/rele
 
 ```powershell
 LMDBArchiverCLI create photos.lmdb C:\Photos
+LMDBArchiverCLI create photos.lmdb C:\Photos --compress      # gzip 압축하여 저장
 LMDBArchiverCLI add photos.lmdb C:\More --destination imports
 LMDBArchiverCLI list photos.lmdb
 LMDBArchiverCLI extract photos.lmdb C:\Restored Photos\2026
+LMDBArchiverCLI extract photos.lmdb C:\GzOnly --no-decompress  # .gz 파일 그대로 추출
 LMDBArchiverCLI remove photos.lmdb imports\obsolete.jpg
 LMDBArchiverCLI test photos.lmdb
 LMDBArchiverCLI compact photos.lmdb

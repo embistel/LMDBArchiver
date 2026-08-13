@@ -10,6 +10,7 @@ class DropView;
 class QLabel;
 class QLineEdit;
 class QModelIndex;
+class QProgressDialog;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -45,6 +46,8 @@ private:
     static void cleanStaleExports();
     void updateActions();
     void showError(const QString &message);
+    static QString phaseLabel(ProgressPhase phase, const QString &fallback);
+    static void applyProgress(QProgressDialog &dialog, const ProgressInfo &info);
 
     Archive m_archive;
     ArchiveModel *m_model = nullptr;
@@ -60,6 +63,7 @@ private:
     QAction *m_extractAllAction = nullptr;
     QAction *m_verifyAction = nullptr;
     QAction *m_compactAction = nullptr;
+    QAction *m_compressAction = nullptr;
     QAction *m_removeAction = nullptr;
     QAction *m_copyAction = nullptr;
     QAction *m_openEntryAction = nullptr;

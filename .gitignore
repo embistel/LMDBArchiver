@@ -3,6 +3,7 @@
 /.wix/
 /.vs/
 /.vscode/
+/.zcode/
 CMakeUserPresets.json
 *.user
 *.lmdb

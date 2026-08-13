@@ -37,13 +37,27 @@ if(WIN32)
     target_link_libraries(lmdb_vendor PRIVATE Advapi32)
 endif()
 
+# miniz (2.2.0, public domain) — vendored as static sources for standard gzip (RFC 1952).
+# We only need deflate/inflate + crc32, so the ZIP archive and stdio APIs are disabled.
+add_library(miniz_vendor STATIC
+    vendor/miniz/miniz.c
+    vendor/miniz/miniz_tdef.c
+    vendor/miniz/miniz_tinfl.c
+)
+target_include_directories(miniz_vendor PUBLIC vendor/miniz)
+target_compile_definitions(miniz_vendor PRIVATE MINIZ_NO_STDIO MINIZ_NO_ARCHIVE_APIS MINIZ_NO_ARCHIVE_WRITING_APIS)
+if(MSVC)
+    target_compile_definitions(miniz_vendor PRIVATE _CRT_SECURE_NO_WARNINGS)
+    target_compile_options(miniz_vendor PRIVATE /W1)
+endif()
+
 add_library(lmdbarchiver_core STATIC
     src/archive/archive.cpp
     src/archive/archive.h
     src/archive/archiveentry.h
 )
 target_include_directories(lmdbarchiver_core PUBLIC src)
-target_link_libraries(lmdbarchiver_core PUBLIC Qt${QT_VERSION_MAJOR}::Core lmdb_vendor)
+target_link_libraries(lmdbarchiver_core PUBLIC Qt${QT_VERSION_MAJOR}::Core lmdb_vendor miniz_vendor)
 
 add_executable(LMDBArchiver WIN32
     src/main.cpp
