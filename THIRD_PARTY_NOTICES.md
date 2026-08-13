@@ -16,3 +16,9 @@ Copyright © 2011-2021 Howard Chu, Symas Corp. LMDB is distributed under the Ope
 
 - Source: <https://github.com/LMDB/lmdb>
 
+## miniz
+
+Copyright © 2010-2014 Rich Geldreich and contributors. miniz is released into the public domain (see the unlicense statement in `vendor/miniz/miniz.c`). It is statically linked for standard gzip (RFC 1952) compression of optionally compressed entries.
+
+- Source: <https://github.com/richgel999/miniz>
+

@@ -1,5 +1,7 @@
 #include "app/archivemodel.h"
 
+#include "archive/archive.h"
+
 #include <QFileIconProvider>
 #include <QLocale>
 
@@ -28,8 +30,16 @@ void ArchiveModel::setEntries(const QList<ArchiveEntry> &entries, const QString 
                 continue;
             }
             const bool directory = !leaf || entry.directory;
+            // For a compressed leaf, show the clean logical name (without the ".<hash>.gz"
+            // marker) while keeping the full stored key in PathRole for extract/remove.
+            QString displayName = parts[i];
+            QString formatLabel = directory ? tr("폴더") : tr("파일");
+            if (leaf && !directory && Archive::isCompressed(entry.path)) {
+                displayName = Archive::logicalPath(entry.path).section(u'/', -1);
+                formatLabel = tr("압축");
+            }
             auto *name = new QStandardItem(directory ? icons.icon(QFileIconProvider::Folder)
-                                                     : icons.icon(QFileIconProvider::File), parts[i]);
+                                                     : icons.icon(QFileIconProvider::File), displayName);
             name->setData(currentPath, PathRole);
             name->setData(directory, DirectoryRole);
             name->setEditable(false);
@@ -39,7 +49,7 @@ void ArchiveModel::setEntries(const QList<ArchiveEntry> &entries, const QString 
                 row << new QStandardItem(directory ? QString{} : locale.formattedDataSize(entry.originalSize));
                 row << new QStandardItem(directory ? QString{} : locale.formattedDataSize(entry.storedSize));
                 row << new QStandardItem(entry.modified.toString(QStringLiteral("yyyy-MM-dd HH:mm")));
-                row << new QStandardItem(directory ? tr("폴더") : tr("파일"));
+                row << new QStandardItem(formatLabel);
             } else {
                 for (int column = 1; column < 5; ++column) row << new QStandardItem;
             }
