@@ -20,6 +20,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QProcess>
 #include <QProgressDialog>
 #include <QSettings>
 #include <QStandardPaths>
@@ -47,9 +48,9 @@ QString formatProgressLabel(ProgressPhase phase, const QString &item, qint64 byt
     const QLocale locale;
     QString phaseText;
     switch (phase) {
-    case ProgressPhase::Collecting:  phaseText = MainWindow::tr("파일 수집 중…"); break;
-    case ProgressPhase::Processing:  phaseText = MainWindow::tr("처리 중…"); break;
-    case ProgressPhase::Finalizing:  phaseText = MainWindow::tr("변경 사항 저장 중…"); break;
+    case ProgressPhase::Collecting:  phaseText = MainWindow::tr("Collecting files…"); break;
+    case ProgressPhase::Processing:  phaseText = MainWindow::tr("Processing…"); break;
+    case ProgressPhase::Finalizing:  phaseText = MainWindow::tr("Saving changes…"); break;
     }
     if (bytesTotal > 0) {
         const int percent = int((bytesDone * 100) / bytesTotal);
@@ -86,9 +87,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     bannerLayout->addWidget(bannerIcon);
     auto *bannerText = new QVBoxLayout;
     bannerText->setSpacing(1);
-    m_archiveName = new QLabel(tr("LMDB 아카이브 관리자"), banner);
+    m_archiveName = new QLabel(tr("LMDB Archive Manager"), banner);
     m_archiveName->setObjectName(QStringLiteral("ArchiveName"));
-    m_archiveLocation = new QLabel(tr("새 아카이브를 만들거나 기존 .lmdb 파일을 여세요."), banner);
+    m_archiveLocation = new QLabel(tr("Create a new archive or open an existing .lmdb file."), banner);
     m_archiveLocation->setObjectName(QStringLiteral("ArchiveLocation"));
     bannerText->addWidget(m_archiveName);
     bannerText->addWidget(m_archiveLocation);
@@ -96,7 +97,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     layout->addWidget(banner);
 
     m_search = new QLineEdit(container);
-    m_search->setPlaceholderText(tr("아카이브에서 검색..."));
+    m_search->setPlaceholderText(tr("Search archive..."));
     m_search->setClearButtonEnabled(true);
     m_search->setEnabled(false);
     layout->addWidget(m_search);
@@ -116,52 +117,67 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     layout->addWidget(m_view, 1);
     setCentralWidget(container);
 
-    auto *fileMenu = menuBar()->addMenu(tr("파일(&F)"));
-    auto *newAction = makeAction(this, QIcon(QStringLiteral(":/icons/new.svg")), tr("새 아카이브(&N)..."), QKeySequence::New);
-    auto *openAction = makeAction(this, QIcon(QStringLiteral(":/icons/open.svg")), tr("열기(&O)..."), QKeySequence::Open);
-    newAction->setIconText(tr("새로 만들기"));
-    openAction->setIconText(tr("열기"));
-    auto *exitAction = makeAction(this, {}, tr("끝내기(&X)"), QKeySequence::Quit);
+    auto *fileMenu = menuBar()->addMenu(tr("&File"));
+    auto *newAction = makeAction(this, QIcon(QStringLiteral(":/icons/new.svg")), tr("&New Archive..."), QKeySequence::New);
+    auto *openAction = makeAction(this, QIcon(QStringLiteral(":/icons/open.svg")), tr("&Open..."), QKeySequence::Open);
+    newAction->setIconText(tr("New"));
+    openAction->setIconText(tr("Open"));
+    auto *exitAction = makeAction(this, {}, tr("E&xit"), QKeySequence::Quit);
     fileMenu->addActions({newAction, openAction});
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);
 
-    auto *editMenu = menuBar()->addMenu(tr("편집(&E)"));
-    m_addFilesAction = makeAction(this, QIcon(QStringLiteral(":/icons/add-file.svg")), tr("파일 추가(&A)..."), QKeySequence(Qt::CTRL | Qt::Key_I));
-    m_addFolderAction = makeAction(this, QIcon(QStringLiteral(":/icons/add-folder.svg")), tr("폴더 추가(&D)..."));
-    m_addFilesAction->setIconText(tr("파일 추가"));
-    m_addFolderAction->setIconText(tr("폴더 추가"));
-    auto *pasteAction = makeAction(this, {}, tr("클립보드의 파일 추가(&P)"), QKeySequence::Paste);
-    m_copyAction = makeAction(this, QIcon(QStringLiteral(":/icons/copy.svg")), tr("선택 항목을 Explorer로 복사(&C)"), QKeySequence::Copy);
-    m_removeAction = makeAction(this, QIcon(QStringLiteral(":/icons/delete.svg")), tr("선택 항목 삭제(&R)"), QKeySequence::Delete);
-    m_openEntryAction = makeAction(this, QIcon(QStringLiteral(":/icons/open.svg")), tr("선택 항목 열기"), QKeySequence(Qt::Key_Return));
+    auto *editMenu = menuBar()->addMenu(tr("&Edit"));
+    m_addFilesAction = makeAction(this, QIcon(QStringLiteral(":/icons/add-file.svg")), tr("&Add File..."), QKeySequence(Qt::CTRL | Qt::Key_I));
+    m_addFolderAction = makeAction(this, QIcon(QStringLiteral(":/icons/add-folder.svg")), tr("Ad&d Folder..."));
+    m_addFilesAction->setIconText(tr("Add File"));
+    m_addFolderAction->setIconText(tr("Add Folder"));
+    auto *pasteAction = makeAction(this, {}, tr("&Paste Files"), QKeySequence::Paste);
+    m_copyAction = makeAction(this, QIcon(QStringLiteral(":/icons/copy.svg")), tr("&Copy Selected to Explorer"), QKeySequence::Copy);
+    m_removeAction = makeAction(this, QIcon(QStringLiteral(":/icons/delete.svg")), tr("&Delete Selected"), QKeySequence::Delete);
+    m_openEntryAction = makeAction(this, QIcon(QStringLiteral(":/icons/open.svg")), tr("Open Selected"), QKeySequence(Qt::Key_Return));
     editMenu->addActions({m_addFilesAction, m_addFolderAction, pasteAction});
     editMenu->addSeparator();
     editMenu->addActions({m_copyAction, m_removeAction});
 
-    auto *archiveMenu = menuBar()->addMenu(tr("아카이브(&A)"));
-    m_extractAction = makeAction(this, QIcon(QStringLiteral(":/icons/extract.svg")), tr("선택 항목 풀기(&E)..."), QKeySequence(Qt::CTRL | Qt::Key_E));
-    m_extractAction->setIconText(tr("풀기"));
-    m_removeAction->setIconText(tr("삭제"));
-    m_extractAllAction = makeAction(this, {}, tr("모두 풀기(&X)..."));
-    m_verifyAction = makeAction(this, QIcon(QStringLiteral(":/icons/verify.svg")), tr("아카이브 검사(&T)"));
-    m_compactAction = makeAction(this, QIcon(QStringLiteral(":/icons/compact.svg")), tr("아카이브 압축 정리(&C)"));
-    auto *refreshAction = makeAction(this, style()->standardIcon(QStyle::SP_BrowserReload), tr("새로 고침"), QKeySequence::Refresh);
-    m_compressAction = makeAction(this, {}, tr("추가 시 gzip 압축(&Z)"));
+    auto *archiveMenu = menuBar()->addMenu(tr("&Archive"));
+    m_extractAction = makeAction(this, QIcon(QStringLiteral(":/icons/extract.svg")), tr("&Extract Selected..."), QKeySequence(Qt::CTRL | Qt::Key_E));
+    m_extractAction->setIconText(tr("Extract"));
+    m_removeAction->setIconText(tr("Delete"));
+    m_extractAllAction = makeAction(this, {}, tr("E&xtract All..."));
+    m_verifyAction = makeAction(this, QIcon(QStringLiteral(":/icons/verify.svg")), tr("Archive &Test"));
+    m_compactAction = makeAction(this, QIcon(QStringLiteral(":/icons/compact.svg")), tr("&Compact Archive"));
+    auto *refreshAction = makeAction(this, style()->standardIcon(QStyle::SP_BrowserReload), tr("Refresh"), QKeySequence::Refresh);
+    m_compressAction = makeAction(this, {}, tr("G&zip on Add"));
     m_compressAction->setCheckable(true);
-    m_compressAction->setToolTip(tr("켜면 파일을 추가할 때 표준 gzip으로 압축하여 저장합니다. 키가 \".<해시>.gz\" 표시로 자기 서술됩니다."));
+    m_compressAction->setToolTip(tr("When enabled, files are stored compressed with standard gzip on add. The key self-describes this with a \".<hash>.gz\" marker."));
     archiveMenu->addActions({m_extractAction, m_extractAllAction, m_verifyAction, m_compactAction, refreshAction});
     archiveMenu->addSeparator();
     archiveMenu->addAction(m_compressAction);
 
-    auto *toolsMenu = menuBar()->addMenu(tr("도구(&T)"));
-    auto *shellAction = makeAction(this, {}, tr("Windows 탐색기 통합..."));
+    auto *toolsMenu = menuBar()->addMenu(tr("&Tools"));
+    auto *shellAction = makeAction(this, {}, tr("Windows Explorer Integration..."));
     toolsMenu->addAction(shellAction);
-    auto *helpMenu = menuBar()->addMenu(tr("도움말(&H)"));
-    auto *aboutAction = makeAction(this, {}, tr("LMDB Archiver 정보"));
+    toolsMenu->addSeparator();
+    // Language selection (English default, Korean optional). Applied on restart.
+    auto *languageMenu = toolsMenu->addMenu(tr("Language"));
+    auto *langGroup = new QActionGroup(this);
+    langGroup->setExclusive(true);
+    m_englishAction = langGroup->addAction(tr("English"));
+    m_koreanAction = langGroup->addAction(QStringLiteral("\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4"));  // 한국어
+    for (auto *act : {m_englishAction, m_koreanAction}) {
+        act->setCheckable(true);
+        languageMenu->addAction(act);
+    }
+    const QString currentLang = QSettings().value(QStringLiteral("ui/language"), QStringLiteral("en")).toString();
+    (currentLang.compare(QStringLiteral("ko"), Qt::CaseInsensitive) == 0 ? m_koreanAction : m_englishAction)->setChecked(true);
+    connect(m_englishAction, &QAction::triggered, this, [this] { switchLanguage(QStringLiteral("en")); });
+    connect(m_koreanAction, &QAction::triggered, this, [this] { switchLanguage(QStringLiteral("ko")); });
+    auto *helpMenu = menuBar()->addMenu(tr("&Help"));
+    auto *aboutAction = makeAction(this, {}, tr("About LMDB Archiver"));
     helpMenu->addAction(aboutAction);
 
-    auto *toolbar = addToolBar(tr("주 도구 모음"));
+    auto *toolbar = addToolBar(tr("Main Toolbar"));
     toolbar->setObjectName(QStringLiteral("MainToolbar"));
     toolbar->setMovable(false);
     toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -169,7 +185,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     toolbar->addSeparator();
     toolbar->addActions({m_addFilesAction, m_addFolderAction, m_extractAction, m_removeAction});
 
-    m_summary = new QLabel(tr("아카이브를 열거나 새로 만드세요. 파일과 폴더를 창으로 끌어 놓을 수 있습니다."), this);
+    m_summary = new QLabel(tr("Open or create an archive. You can drag files and folders into the window."), this);
     statusBar()->addWidget(m_summary, 1);
 
     connect(newAction, &QAction::triggered, this, &MainWindow::newArchive);
@@ -217,7 +233,7 @@ bool MainWindow::openArchive(const QString &path)
 
 void MainWindow::newArchive()
 {
-    QString path = QFileDialog::getSaveFileName(this, tr("새 LMDB 아카이브"), {}, tr("LMDB 아카이브 (*.lmdb)"));
+    QString path = QFileDialog::getSaveFileName(this, tr("New LMDB Archive"), {}, tr("LMDB archive (*.lmdb)"));
     if (path.isEmpty()) return;
     if (!path.endsWith(QStringLiteral(".lmdb"), Qt::CaseInsensitive)) path += QStringLiteral(".lmdb");
     const bool replaceExisting = QFileInfo::exists(path);
@@ -232,19 +248,19 @@ void MainWindow::newArchive()
 
 void MainWindow::chooseArchive()
 {
-    const QString path = QFileDialog::getOpenFileName(this, tr("LMDB 아카이브 열기"), {}, tr("LMDB 아카이브 (*.lmdb);;모든 파일 (*.*)"));
+    const QString path = QFileDialog::getOpenFileName(this, tr("Open LMDB Archive"), {}, tr("LMDB archive (*.lmdb);;All files (*.*)"));
     if (!path.isEmpty()) openArchive(path);
 }
 
 void MainWindow::addFiles()
 {
-    const QStringList paths = QFileDialog::getOpenFileNames(this, tr("추가할 파일"));
+    const QStringList paths = QFileDialog::getOpenFileNames(this, tr("Files to add"));
     addLocalPaths(paths);
 }
 
 void MainWindow::addFolder()
 {
-    const QString path = QFileDialog::getExistingDirectory(this, tr("추가할 폴더"));
+    const QString path = QFileDialog::getExistingDirectory(this, tr("Folder to add"));
     if (!path.isEmpty()) addLocalPaths({path});
 }
 
@@ -255,7 +271,7 @@ void MainWindow::pasteFiles()
     QStringList paths;
     const QMimeData *mime = QApplication::clipboard()->mimeData();
     for (const QUrl &url : mime->urls()) if (url.isLocalFile()) paths << url.toLocalFile();
-    if (paths.isEmpty()) { statusBar()->showMessage(tr("클립보드에 추가할 파일이 없습니다."), 3000); return; }
+    if (paths.isEmpty()) { statusBar()->showMessage(tr("No files on the clipboard to add."), 3000); return; }
     addLocalPaths(paths);
 }
 
@@ -276,7 +292,7 @@ QStringList MainWindow::exportPaths(const QStringList &requestedPaths)
     const QString root = QStandardPaths::writableLocation(QStandardPaths::TempLocation)
         + QStringLiteral("/LMDBArchiver/exports/")
         + QUuid::createUuid().toString(QUuid::WithoutBraces);
-    if (!QDir().mkpath(root)) { showError(tr("임시 내보내기 폴더를 만들 수 없습니다.")); return {}; }
+    if (!QDir().mkpath(root)) { showError(tr("Could not create a temporary export folder.")); return {}; }
     if (!extractPaths(topLevel, root)) {
         QDir(root).removeRecursively();
         return {};
@@ -298,7 +314,7 @@ void MainWindow::copySelected()
     auto *mime = new QMimeData;
     mime->setUrls(urls);
     QApplication::clipboard()->setMimeData(mime);
-    statusBar()->showMessage(tr("%1개 항목을 복사했습니다. Explorer에서 붙여넣으세요.").arg(urls.size()), 5000);
+    statusBar()->showMessage(tr("Copied %1 item(s). Paste in Explorer.").arg(urls.size()), 5000);
 }
 
 void MainWindow::dragSelectedOut(const QStringList &paths)
@@ -326,7 +342,7 @@ void MainWindow::openSelected(const QModelIndex &index)
     const QString path = nameIndex.data(ArchiveModel::PathRole).toString();
     const QStringList local = exportPaths({path});
     if (!local.isEmpty() && !QDesktopServices::openUrl(QUrl::fromLocalFile(local.first())))
-        showError(tr("연결된 프로그램으로 파일을 열 수 없습니다."));
+        showError(tr("Could not open the file with the associated program."));
 }
 
 void MainWindow::showEntryMenu(const QPoint &position)
@@ -358,7 +374,7 @@ void MainWindow::cleanStaleExports()
 bool MainWindow::addLocalPaths(const QStringList &paths, const QString &destination)
 {
     if (!m_archive.isOpen() || paths.isEmpty()) return false;
-    QProgressDialog dialog(tr("항목을 아카이브에 추가하는 중..."), tr("취소"), 0, 0, this);
+    QProgressDialog dialog(tr("Adding entries to the archive..."), tr("Cancel"), 0, 0, this);
     dialog.setWindowModality(Qt::WindowModal);
     dialog.setMinimumDuration(250);
     QString error;
@@ -368,7 +384,7 @@ bool MainWindow::addLocalPaths(const QStringList &paths, const QString &destinat
             applyProgress(dialog, info);
             return !dialog.wasCanceled();
         }, compress);
-    if (!ok) { showError(error.isEmpty() ? tr("추가 작업이 취소되었습니다.") : error); return false; }
+    if (!ok) { showError(error.isEmpty() ? tr("The add operation was cancelled.") : error); return false; }
     refresh();
     return true;
 }
@@ -385,7 +401,7 @@ void MainWindow::removeSelected()
 {
     const QStringList paths = selectedPaths();
     if (paths.isEmpty()) return;
-    if (QMessageBox::question(this, tr("항목 삭제"), tr("선택한 %1개 항목을 아카이브에서 삭제할까요?\n이 작업은 되돌릴 수 없습니다.").arg(paths.size())) != QMessageBox::Yes) return;
+    if (QMessageBox::question(this, tr("Delete Items"), tr("Delete the %1 selected item(s) from the archive?\nThis cannot be undone.").arg(paths.size())) != QMessageBox::Yes) return;
     QString error;
     if (!m_archive.removePaths(paths, &error)) { showError(error); return; }
     refresh();
@@ -395,22 +411,22 @@ void MainWindow::extractSelected()
 {
     const QStringList paths = selectedPaths();
     if (paths.isEmpty()) return;
-    const QString destination = QFileDialog::getExistingDirectory(this, tr("선택 항목을 풀 폴더"));
+    const QString destination = QFileDialog::getExistingDirectory(this, tr("Folder to extract the selection to"));
     if (destination.isEmpty()) return;
-    if (extractPaths(paths, destination)) statusBar()->showMessage(tr("선택 항목을 풀었습니다."), 4000);
+    if (extractPaths(paths, destination)) statusBar()->showMessage(tr("Extracted the selection."), 4000);
 }
 
 void MainWindow::extractAll()
 {
     if (!m_archive.isOpen()) return;
-    const QString destination = QFileDialog::getExistingDirectory(this, tr("모든 항목을 풀 폴더"));
+    const QString destination = QFileDialog::getExistingDirectory(this, tr("Folder to extract everything to"));
     if (destination.isEmpty()) return;
-    if (extractPaths({}, destination)) statusBar()->showMessage(tr("아카이브를 모두 풀었습니다."), 4000);
+    if (extractPaths({}, destination)) statusBar()->showMessage(tr("Extracted the whole archive."), 4000);
 }
 
 bool MainWindow::extractPaths(const QStringList &paths, const QString &destination)
 {
-    QProgressDialog dialog(tr("아카이브에서 항목을 푸는 중..."), tr("취소"), 0, 0, this);
+    QProgressDialog dialog(tr("Extracting entries from the archive..."), tr("Cancel"), 0, 0, this);
     dialog.setWindowModality(Qt::WindowModal);
     dialog.setMinimumDuration(250);
     QString error;
@@ -419,13 +435,13 @@ bool MainWindow::extractPaths(const QStringList &paths, const QString &destinati
             applyProgress(dialog, info);
             return !dialog.wasCanceled();
         });
-    if (!ok) showError(error.isEmpty() ? tr("풀기 작업이 취소되었습니다.") : error);
+    if (!ok) showError(error.isEmpty() ? tr("The extract operation was cancelled.") : error);
     return ok;
 }
 
 void MainWindow::verifyArchive()
 {
-    QProgressDialog dialog(tr("아카이브 레코드를 검사하는 중..."), tr("취소"), 0, 0, this);
+    QProgressDialog dialog(tr("Verifying archive records..."), tr("Cancel"), 0, 0, this);
     dialog.setWindowModality(Qt::WindowModal);
     dialog.setMinimumDuration(250);
     QString error;
@@ -434,16 +450,16 @@ void MainWindow::verifyArchive()
             applyProgress(dialog, info);
             return !dialog.wasCanceled();
         });
-    if (!ok) showError(error.isEmpty() ? tr("검사 작업이 취소되었습니다.") : error);
-    else QMessageBox::information(this, tr("아카이브 검사"), tr("모든 항목의 데이터가 정상적으로 읽혔습니다."));
+    if (!ok) showError(error.isEmpty() ? tr("The verification was cancelled.") : error);
+    else QMessageBox::information(this, tr("Verify Archive"), tr("All entries were read successfully."));
 }
 
 void MainWindow::compactArchive()
 {
-    if (QMessageBox::question(this, tr("아카이브 압축 정리"),
-        tr("사용하지 않는 LMDB 페이지를 제거해 파일 크기를 줄일까요?\n작업 중에는 아카이브를 사용할 수 없습니다.")) != QMessageBox::Yes) return;
+    if (QMessageBox::question(this, tr("Compact Archive"),
+        tr("Remove unused LMDB pages to shrink the file?\nThe archive is unavailable during this operation.")) != QMessageBox::Yes) return;
     const qint64 before = QFileInfo(m_archive.filePath()).size();
-    QProgressDialog dialog(tr("아카이브를 안전하게 다시 작성하는 중..."), {}, 0, 0, this);
+    QProgressDialog dialog(tr("Safely rewriting the archive..."), {}, 0, 0, this);
     dialog.setWindowModality(Qt::WindowModal);
     dialog.setCancelButton(nullptr);
     dialog.show();
@@ -452,8 +468,8 @@ void MainWindow::compactArchive()
     if (!m_archive.compact(&error)) { showError(error); return; }
     const qint64 after = QFileInfo(m_archive.filePath()).size();
     refresh();
-    QMessageBox::information(this, tr("압축 정리 완료"),
-        tr("아카이브 크기: %1 → %2").arg(QLocale().formattedDataSize(before), QLocale().formattedDataSize(after)));
+    QMessageBox::information(this, tr("Compaction complete"),
+        tr("Archive size: %1 → %2").arg(QLocale().formattedDataSize(before), QLocale().formattedDataSize(after)));
 }
 
 void MainWindow::refresh()
@@ -467,7 +483,7 @@ void MainWindow::refresh()
     qint64 total = 0;
     qsizetype files = 0;
     for (const auto &entry : m_entries) if (!entry.directory) { total += entry.originalSize; ++files; }
-    m_summary->setText(tr("%1개 파일 · %2 · %3").arg(files).arg(QLocale().formattedDataSize(total), m_archive.filePath()));
+    m_summary->setText(tr("%1 files · %2 · %3").arg(files).arg(QLocale().formattedDataSize(total), m_archive.filePath()));
     m_search->setEnabled(true);
     updateActions();
 }
@@ -476,25 +492,44 @@ void MainWindow::configureShell()
 {
     QString error;
     if (ShellIntegration::isMachineInstalled()) {
-        QMessageBox::information(this, tr("Windows 탐색기 통합"),
-            tr("탐색기 통합이 MSI 설치 패키지에 의해 시스템 전체에 설치되어 있습니다.\n변경하거나 제거하려면 Windows의 설치된 앱에서 LMDB Archiver를 관리하세요."));
+        QMessageBox::information(this, tr("Windows Explorer Integration"),
+            tr("Explorer integration is installed system-wide by the MSI package.\nTo change or remove it, manage LMDB Archiver from Windows Installed apps."));
     } else if (ShellIntegration::isInstalled()) {
-        if (QMessageBox::question(this, tr("Windows 탐색기 통합"), tr("탐색기 통합이 설치되어 있습니다. 제거할까요?")) == QMessageBox::Yes) {
-            if (!ShellIntegration::uninstall(&error)) showError(error); else QMessageBox::information(this, tr("완료"), tr("탐색기 통합을 제거했습니다."));
+        if (QMessageBox::question(this, tr("Windows Explorer Integration"), tr("Explorer integration is installed. Remove it?")) == QMessageBox::Yes) {
+            if (!ShellIntegration::uninstall(&error)) showError(error); else QMessageBox::information(this, tr("Done"), tr("Explorer integration removed."));
         }
-    } else if (QMessageBox::question(this, tr("Windows 탐색기 통합"),
-               tr("현재 사용자 계정에 .lmdb 연결과 파일·폴더 우클릭 메뉴를 설치할까요?\n관리자 권한은 필요하지 않습니다.")) == QMessageBox::Yes) {
+    } else if (QMessageBox::question(this, tr("Windows Explorer Integration"),
+               tr("Install the .lmdb association and file/folder context menus for the current user?\nNo administrator privileges required.")) == QMessageBox::Yes) {
         if (!ShellIntegration::install(QCoreApplication::applicationFilePath(), &error)) showError(error);
-        else QMessageBox::information(this, tr("완료"), tr("탐색기 통합을 설치했습니다."));
+        else QMessageBox::information(this, tr("Done"), tr("Explorer integration installed."));
+    }
+}
+
+void MainWindow::switchLanguage(const QString &languageCode)
+{
+    QSettings settings;
+    if (settings.value(QStringLiteral("ui/language"), QStringLiteral("en")).toString()
+            .compare(languageCode, Qt::CaseInsensitive) == 0)
+        return;  // nothing to do
+    settings.setValue(QStringLiteral("ui/language"), languageCode);
+    // The UI is built in code with tr(), so a live swap would need a full retranslate
+    // pass. Restarting is simpler and bulletproof for a rarely-used setting.
+    const auto choice = QMessageBox::question(
+        this, tr("Language"),
+        tr("The language will change after restarting the app. Restart now?"),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+    if (choice == QMessageBox::Yes) {
+        QProcess::startDetached(QCoreApplication::applicationFilePath(), QStringList());
+        QCoreApplication::quit();
     }
 }
 
 void MainWindow::showAbout()
 {
-    QMessageBox::about(this, tr("LMDB Archiver 정보"),
-        tr("<h2>LMDB Archiver</h2><p>빠르고 안정적인 LMDB 기반 데스크톱 아카이브 관리자</p>"
-           "<p>버전 %1 · Qt %2 · LMDB 0.9.33</p>"
-           "<p>MIT 라이선스</p>").arg(QStringLiteral(LMDBARCHIVER_VERSION), QString::fromLatin1(qVersion())));
+    QMessageBox::about(this, tr("About LMDB Archiver"),
+        tr("<h2>LMDB Archiver</h2><p>A fast, reliable LMDB-based desktop archive manager</p>"
+           "<p>Version %1 · Qt %2 · LMDB 0.9.33</p>"
+           "<p>MIT License</p>").arg(QStringLiteral(LMDBARCHIVER_VERSION), QString::fromLatin1(qVersion())));
 }
 
 void MainWindow::updateActions()
@@ -515,9 +550,9 @@ void MainWindow::showError(const QString &message) { QMessageBox::critical(this,
 QString MainWindow::phaseLabel(ProgressPhase phase, const QString &fallback)
 {
     switch (phase) {
-    case ProgressPhase::Collecting:  return tr("파일 수집 중…");
-    case ProgressPhase::Processing:  return tr("처리 중…");
-    case ProgressPhase::Finalizing:  return tr("변경 사항 저장 중…");
+    case ProgressPhase::Collecting:  return tr("Collecting files…");
+    case ProgressPhase::Processing:  return tr("Processing…");
+    case ProgressPhase::Finalizing:  return tr("Saving changes…");
     }
     return fallback;
 }

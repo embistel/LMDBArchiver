@@ -3,7 +3,25 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QFont>
+#include <QSettings>
 #include <QStyleFactory>
+#include <QTranslator>
+
+namespace {
+// Loads the Korean translation when the user has chosen Korean. English is the
+// default and needs no translator (it is the tr() source language).
+void installAppTranslator()
+{
+    QSettings settings;
+    const QString language = settings.value(QStringLiteral("ui/language"), QStringLiteral("en")).toString();
+    if (language.compare(QStringLiteral("ko"), Qt::CaseInsensitive) != 0) return;
+    auto *translator = new QTranslator(QCoreApplication::instance());
+    if (translator->load(QStringLiteral("app_ko"), QCoreApplication::applicationDirPath()))
+        QCoreApplication::installTranslator(translator);
+    else
+        delete translator;
+}
+}
 
 int main(int argc, char *argv[])
 {
@@ -11,6 +29,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName(QStringLiteral("embistel"));
     QCoreApplication::setApplicationName(QStringLiteral("LMDBArchiver"));
     QCoreApplication::setApplicationVersion(QStringLiteral(LMDBARCHIVER_VERSION));
+    installAppTranslator();
     application.setStyle(QStyleFactory::create(QStringLiteral("Fusion")));
     application.setFont(QFont(QStringLiteral("Segoe UI"), 10));
     application.setStyleSheet(QStringLiteral(

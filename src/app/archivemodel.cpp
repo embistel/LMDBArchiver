@@ -7,7 +7,7 @@
 
 ArchiveModel::ArchiveModel(QObject *parent) : QStandardItemModel(parent)
 {
-    setHorizontalHeaderLabels({tr("이름"), tr("크기"), tr("저장 크기"), tr("수정한 날짜"), tr("형식")});
+    setHorizontalHeaderLabels({tr("Name"), tr("Size"), tr("Stored size"), tr("Date modified"), tr("Type")});
 }
 
 void ArchiveModel::setEntries(const QList<ArchiveEntry> &entries, const QString &filter)
@@ -33,10 +33,10 @@ void ArchiveModel::setEntries(const QList<ArchiveEntry> &entries, const QString 
             // For a compressed leaf, show the clean logical name (without the ".<hash>.gz"
             // marker) while keeping the full stored key in PathRole for extract/remove.
             QString displayName = parts[i];
-            QString formatLabel = directory ? tr("폴더") : tr("파일");
+            QString formatLabel = directory ? tr("Folder") : tr("File");
             if (leaf && !directory && Archive::isCompressed(entry.path)) {
                 displayName = Archive::logicalPath(entry.path).section(u'/', -1);
-                formatLabel = tr("압축");
+                formatLabel = tr("Compressed");
             }
             auto *name = new QStandardItem(directory ? icons.icon(QFileIconProvider::Folder)
                                                      : icons.icon(QFileIconProvider::File), displayName);

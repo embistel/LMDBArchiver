@@ -20,6 +20,8 @@ if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -F
 New-Item -ItemType Directory -Path $stage | Out-Null
 Copy-Item -LiteralPath $executable -Destination $stage
 Copy-Item -LiteralPath $cliExecutable -Destination $stage
+$koQm = Join-Path $buildPath "app_ko.qm"
+if (Test-Path -LiteralPath $koQm) { Copy-Item -LiteralPath $koQm -Destination $stage }
 Copy-Item -LiteralPath (Join-Path $projectRoot "README.md") -Destination $stage
 Copy-Item -LiteralPath (Join-Path $projectRoot "LICENSE") -Destination $stage
 Copy-Item -LiteralPath (Join-Path $projectRoot "THIRD_PARTY_NOTICES.md") -Destination $stage

@@ -39,6 +39,7 @@ private slots:
     void showAbout();
 
 private:
+    void switchLanguage(const QString &languageCode);
     QStringList selectedPaths() const;
     bool addLocalPaths(const QStringList &paths, const QString &destination = {});
     bool extractPaths(const QStringList &paths, const QString &destination);
@@ -67,4 +68,6 @@ private:
     QAction *m_removeAction = nullptr;
     QAction *m_copyAction = nullptr;
     QAction *m_openEntryAction = nullptr;
+    QAction *m_englishAction = nullptr;
+    QAction *m_koreanAction = nullptr;
 };

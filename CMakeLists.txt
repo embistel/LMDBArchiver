@@ -12,7 +12,7 @@ set(CMAKE_AUTOUIC ON)
 include(FetchContent)
 find_package(Threads REQUIRED)
 find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTools)
 
 FetchContent_Declare(
     lmdb
@@ -80,6 +80,16 @@ target_link_libraries(LMDBArchiver PRIVATE lmdbarchiver_core Qt${QT_VERSION_MAJO
 if(WIN32)
     target_link_libraries(LMDBArchiver PRIVATE Advapi32 Shell32)
 endif()
+# Korean translation: lupdate scans sources -> app_ko.ts, lrelease compiles app_ko.qm
+# next to the executable. Loaded at runtime via QTranslator from the app directory,
+# so the MSI/ZIP package the .qm alongside the binaries.
+qt6_add_translations(LMDBArchiver
+    TS_FILES translations/app_ko.ts
+    SOURCES src/app/mainwindow.cpp src/app/app.cpp src/app/archivemodel.cpp
+    QM_FILES_OUTPUT_VARIABLE ko_qm_files)
+# Make sure the .qm is (re)generated whenever the app is built.
+add_dependencies(LMDBArchiver LMDBArchiver_lrelease)
+install(FILES ${ko_qm_files} DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 add_executable(LMDBArchiverCLI src/cli/main.cpp)
 target_link_libraries(LMDBArchiverCLI PRIVATE lmdbarchiver_core Qt${QT_VERSION_MAJOR}::Core)
